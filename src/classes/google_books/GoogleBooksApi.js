@@ -5,7 +5,7 @@ import GoogleBook from "@/classes/google_books/GoogleBook";
 class GoogleBooksApi {
 
   //API-ключ для авторизации
-  static API_KEY = 'AIzaSyAW4W-xY4NQhPiThO69Cir3mSX1dydDGvYY'; //TODO лучше загружать из внешнего настроечного файла
+  static API_KEY = 'AIzaSyAW4W-xY4NQhPiThO69Cir3mSX1dydDGvY'; //TODO лучше загружать из внешнего настроечного файла
 
   //Неизменяемая часть URL для запроса
   static GET_QUERY_PREFIX = 'https://www.googleapis.com/books/v1/volumes?';
