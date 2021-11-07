@@ -13,7 +13,7 @@
       >
         <v-img
           class="image"
-          :src="src"
+          :src="item.src"
           :aspect-ratio="128/178"
           width="128"
         >
@@ -38,7 +38,7 @@
         class="text-start pa-0 pl-10"
       >
         <p class="category">
-          {{ category }}
+          {{ item.category }}
         </p>
       </v-col>
     </v-row>
@@ -48,7 +48,7 @@
         class="text-start pa-0 pl-10"
       >
         <h4 class="title">
-          {{ title }}
+          {{ item.title }}
         </h4>
       </v-col>
     </v-row>
@@ -58,7 +58,7 @@
         class="text-start pa-0 pl-10"
       >
         <p class="author">
-          {{ authors }}
+          {{ item.authors }}
         </p>
       </v-col>
     </v-row>
@@ -75,7 +75,7 @@
             <!-- Не нашел картинку лучшего качества -->
             <v-img
               class="image"
-              :src="src"
+              :src="item.src"
               :aspect-ratio="128/178"
               width="500px"
             >
@@ -103,7 +103,7 @@
                 class="text-start"
               >
                 <p class="category">
-                  {{ category }}
+                  {{ item.category }}
                 </p>
               </v-col>
             </v-row>
@@ -113,7 +113,7 @@
                 class="text-start"
               >
                 <h4 class="title">
-                  {{ title }}
+                  {{ item.title }}
                 </h4>
               </v-col>
             </v-row>
@@ -123,7 +123,7 @@
                 class="text-start"
               >
                 <p class="author">
-                  {{ authors }}
+                  {{ item.authors }}
                 </p>
               </v-col>
             </v-row>
@@ -133,7 +133,7 @@
                 class="text-start"
               >
                 <v-textarea
-                  v-model="description"
+                  v-model="item.description"
                   readonly
                 />
               </v-col>
@@ -158,67 +158,18 @@
     data: () => ({
       open_book: false,
     }),
-    computed: {
-      /**
-       * @return {string}
-       */
-      authors() {
-        const authors = this.item.volumeInfo.authors;
-        return authors !== undefined
-        && typeof authors === 'object'
-        && authors.length > 0
-          ? authors.join(', ')
-          : 'Неизвестен';
-      },
 
-      /**
-       * @return {string}
-       */
-      category() {
-        const categories = this.item.volumeInfo.categories;
-        return categories !== undefined
-        && typeof categories === 'object'
-        && categories.length > 0
-          ? categories[0]
-          : 'Неизвестна';
-      },
-
-      /**
-       * @return {string}
-       */
-      title() {
-        const title = this.item.volumeInfo.title;
-        return title !== undefined
-        && typeof title === 'string'
-          ? title
-          : 'Неизвестно';
-      },
-
-      /**
-       * @return {string}
-       */
-      src() {
-        const src = this.item.volumeInfo.imageLinks.thumbnail;
-        return src !== undefined
-        && typeof src === 'string'
-          ? src
-          : '';
-      },
-
-      /**
-       * @return {string}
-       */
-      description() {
-        const description = this.item.volumeInfo.description;
-        return description !== undefined
-        && typeof description === 'string'
-          ? description
-          : 'Описание не найдено';
-      }
-    },
     methods: {
+
+      /**
+       * @description Открыть окно более полного описания книги
+       *
+       * @return {Object} Vue Component
+       */
       openBook() {
         this.open_book = true;
+
+        return this;
       },
     }
   }
@@ -237,5 +188,9 @@
 
   >>> .author {
     color: darkgrey;
+  }
+
+  >>> .book_item {
+    cursor: pointer;
   }
 </style>

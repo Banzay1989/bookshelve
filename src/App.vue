@@ -2,8 +2,8 @@
   <v-app>
     <Header
       :name="'books'"
-      :categories="categories"
-      :sort_variables="sort_variables"
+      :categories="api.categories"
+      :sort_values="api.sort_values"
       @search="goSearch"
     />
     <v-row
@@ -14,21 +14,20 @@
         cols="12"
       >
         <h4>
-          Founded {{ searched_books }} results
+          Founded {{ api.result_count }} results
         </h4>
       </v-col>
     </v-row>
     <v-row>
       <v-col
-        v-for="book in books"
-        :key="book.id"
+        v-for="(book,index) in api.books"
+        :key="index"
         class="text-center"
         cols="12"
         md="3"
         wrap
       >
         <book-item
-          :id="'book_'+book.id"
           :item="book"
         />
       </v-col>
@@ -40,6 +39,20 @@
       color="black"
       indeterminate
     />
+    <v-snackbar
+      v-model="errors.length"
+      color="red"
+      top
+    >
+      <v-list dense>
+        <v-list-item
+          v-for="(error, index) in errors"
+          :key="index"
+        >
+          {{ error }}
+        </v-list-item>
+      </v-list>
+    </v-snackbar>
   </v-app>
 </template>
 
@@ -51,9 +64,9 @@
   import BookItem from '@/components/BookItem.vue';
 
   /**
-   * Constants
+   * Classes
    */
-  import {API_KEY, GET_QUERY} from "@/const/google_api";
+  import GoogleBooksApi from "@/classes/google_books/GoogleBooksApi"
 
   export default {
     name: 'App',
@@ -64,48 +77,19 @@
     },
 
     data: () => ({
-      searched_books: 0,
-      subject: {},
-      books: [],
       loading: false,
-      categories: [
-        'all',
-        'art',
-        'biography',
-        'computers',
-        'history',
-        'medical',
-        'poetry',
-      ],
-      sort_variables: [
-        'relevance',
-        'newest',
-      ],
+      api: new GoogleBooksApi(),
+      errors: [],
     }),
 
-
     mounted() {
-      this.subject = this.clearSubject();
+      //Слушатель события пролистывания страницы
       document.addEventListener('scroll', e => {
-        if (this.books.length === this.subject.startIndex+this.subject.maxResults){
-          this.onScroll(e);
-        }
+        this.onScroll(e);
       }, false);
     },
 
     methods: {
-      clearSubject() {
-        this.books = [];
-        this.searched_books = 0;
-        return {
-          q: '', //Строка поиска
-          orderBy: '', //сортировка
-          startIndex: 0, //начальный индекс для пагинации (начинается с 0)
-          maxResults: 30, //количество результатов для пагинации
-          key: '', //API-ключ для авторизации
-        };
-      },
-
       /**
        * @description отправляет запрос для поиска книг
        * @param {Object} subject
@@ -113,106 +97,39 @@
        * @return {Object} Vue Component
        */
       goSearch(subject) {
-        this.subject = this.clearSubject();
-        this.fillSubject(subject);
-        const query_string = this.prepareQueryString();
-        const p = this.getQuery(query_string);
-
-        p.then(response => {
-          const data = response.data;
-          if (data.totalItems !== undefined && typeof data.totalItems === 'number') {
-            this.searched_books = data.totalItems;
-          } else {
-            console.error('Не удалось определить количество найденных книг');
-          }
-
-          if (data.items !== undefined && typeof data.items === 'object' && data.items.length > 0) {
-            this.books = data.items;
-          } else {
-            console.error('Не удалось получить данные по книгам');
-          }
-
-
-        })
-          .catch(error => {
-            console.error(error);
-          })
-          .finally(() => {
-            this.loading = false;
-          })
-        return this;
+        this.api.clearSearchString(subject.q);
+        this.api.addCategoryToSearchString(subject.category);
+        this.api.clearInfo();
+        this.api.setSelectedSort(subject.orderBy);
+        this.getBooks();
       },
 
       /**
-       * @description подготовка объекта с данными для запроса
-       * @param {Object} subject
-       *
+       * Срабатывает при прокручивании страницы
+       * @param {Object} event
        * @return {Object} Vue Component
        */
-      fillSubject(subject) {
-        this.subject.q = subject.q;
-        this.subject.orderBy = subject.orderBy;
-        this.subject.key = API_KEY;
-
-        return this;
-      },
-
-      prepareQueryString() {
-        let query_string = GET_QUERY;
-        Object.keys(this.subject).forEach(key => {
-          query_string += `${key}=${this.subject[key]}&`;
-        });
-
-        //Последний символ "&" является лишним и надо его отрезать
-        return query_string.substr(0, query_string.length - 1);
-      },
-
-      /**
-       * Промис получения данных
-       *
-       * @param {String} query_string
-       * @return {Promise<AxiosResponse<any>>}
-       */
-      getQuery(query_string) {
-        this.loading = true;
-
-        return window.axios.get(query_string);
-      },
-
       onScroll(event) {
         let height = event.target.documentElement.clientHeight;
         let scroll = event.target.documentElement.scrollHeight - event.target.documentElement.scrollTop;
-        if (height === scroll){
-          this.loadMore();
+        if (height === scroll && !this.loading) { //Если мы достигли конца страницы и сейчас ничего не загружается
+          this.getBooks();
         }
+
+        return this;
       },
 
-      loadMore(){
-        this.subject.startIndex = this.books.length;
-        const query_string = this.prepareQueryString();
-        const p = this.getQuery(query_string);
-
-        p.then(response => {
-          const data = response.data;
-
-          if (data.items !== undefined && typeof data.items === 'object' && data.items.length > 0) {
-            this.books = this.books.concat(data.items);
-          } else {
-            console.error('Не удалось получить данные по книгам');
-          }
-
-        })
-          .catch(error => {
-            console.error(error);
-          })
-          .finally(() => {
-            this.loading = false;
-          })
-        return this;
+      async getBooks() {
+        this.loading = true;
+        const errors = await this.api.getBooks();
+        this.loading = false;
+        if (errors.length) { //Покажем ошибки если они есть
+          this.errors = errors;
+          setTimeout(() => {
+            this.errors = [];
+          }, 6000);
+        }
       }
-
-
-
     },
 
   };
